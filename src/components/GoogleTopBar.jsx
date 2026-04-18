@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { LogIn, LogOut, Loader, CheckCircle2, AlertCircle, RefreshCw, FlaskConical, Menu } from 'lucide-react'
 import { testDriveUpload } from '../services/driveService'
 
@@ -7,7 +7,20 @@ const FOLDER_ID = import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID || null
 export default function GoogleTopBar({ sync, candidates, onLoadCandidates, onLoadProjects, onLoadInterviews, onLoadDocuments, onMenuClick, isMobile }) {
   const [working,    setWorking]    = useState(false)
   const [prompt,     setPrompt]     = useState(null)
-  const [driveTest,  setDriveTest]  = useState(null)  // null | 'testing' | { ok, error }
+  const [driveTest,  setDriveTest]  = useState(null)
+
+  // Auto-connect when GIS is ready and user has connected before
+  useEffect(() => {
+    if (!sync.ready || sync.connected || working) return
+    if (sync.wasConnected?.()) {
+      setWorking(true)
+      sync.connect().then(() => {
+        sync.fetchProjects?.().then((p) => p?.length && onLoadProjects?.(p)).catch(() => {})
+        sync.fetchInterviews?.().then((iv) => iv?.length && onLoadInterviews?.(iv)).catch(() => {})
+        sync.fetchDocuments?.().then((d) => d && onLoadDocuments?.(d)).catch(() => {})
+      }).catch(() => {}).finally(() => setWorking(false))
+    }
+  }, [sync.ready])
 
   if (!sync.hasConfig) return null   // hide bar entirely if not configured
 

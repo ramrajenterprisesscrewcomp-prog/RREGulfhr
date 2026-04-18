@@ -40,6 +40,16 @@ export function useGoogleSync() {
     document.head.appendChild(s)
   }, [])
 
+  // ── Auto-trigger connect (no popup) after GIS is ready ───────────────────────
+  useEffect(() => {
+    if (!ready || connected || !wasConnected()) return
+    // Short delay so tokenClient is fully initialised
+    const t = setTimeout(() => {
+      requestToken(true).catch(() => {})
+    }, 800)
+    return () => clearTimeout(t)
+  }, [ready])
+
   // ── Listen for auth changes (login / logout events) ──────────────────────────
   useEffect(() => {
     const handler = (e) => {
@@ -305,6 +315,7 @@ export function useGoogleSync() {
   return {
     ready, connected, syncing, lastSync, error,
     hasConfig: Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID && SHEET_ID),
+    wasConnected,
     connect, disconnect, fetchCandidates, exportAll,
     syncAdd, syncAddMany, syncUpdate, syncDelete,
     syncAddProject, syncUpdateProject, syncDeleteProject,
