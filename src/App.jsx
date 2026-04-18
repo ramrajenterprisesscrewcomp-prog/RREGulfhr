@@ -7,11 +7,15 @@ import Documents from './components/Documents'
 import { initialCandidates, initialInterviews, initialProjects } from './data/mockData'
 import { useGoogleSync } from './hooks/useGoogleSync'
 import GoogleTopBar from './components/GoogleTopBar'
+import { useIsMobile } from './hooks/useWindowSize'
+
 export default function App() {
   return <AppMain />
 }
 
 function AppMain() {
+  const isMobile = useIsMobile()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('dashboard')
   const [candidates, setCandidates] = useState(initialCandidates)
   const [interviews, setInterviews] = useState(initialInterviews)
@@ -263,20 +267,33 @@ function AppMain() {
         onLoadProjects={handleLoadProjects}
         onLoadInterviews={handleLoadInterviews}
         onLoadDocuments={handleLoadDocuments}
+        onMenuClick={() => setSidebarOpen(o => !o)}
+        isMobile={isMobile}
       />
 
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
+        {/* Mobile overlay */}
+        {isMobile && sidebarOpen && (
+          <div
+            onClick={() => setSidebarOpen(false)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 199, backdropFilter: 'blur(2px)' }}
+          />
+        )}
+
       <Sidebar
         candidates={candidates}
         interviews={interviews}
         activeTab={activeTab}
-        setActiveTab={(tab) => { setActiveTab(tab); setDrawerCandidate(null) }}
+        setActiveTab={(tab) => { setActiveTab(tab); setDrawerCandidate(null); if (isMobile) setSidebarOpen(false) }}
         onCandidateClick={handleOpenDrawer}
         googleSync={googleSync}
         onLoadCandidates={handleLoadCandidates}
+        isMobile={isMobile}
+        isOpen={isMobile ? sidebarOpen : true}
+        onClose={() => setSidebarOpen(false)}
       />
 
-      <main style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
+      <main style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative', marginLeft: isMobile ? 0 : 0 }}>
         {activeTab === 'dashboard' && (
           <Dashboard
             candidates={candidates}

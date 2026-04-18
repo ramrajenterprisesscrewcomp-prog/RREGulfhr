@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { LogIn, LogOut, Loader, CheckCircle2, AlertCircle, RefreshCw, FlaskConical } from 'lucide-react'
+import { LogIn, LogOut, Loader, CheckCircle2, AlertCircle, RefreshCw, FlaskConical, Menu } from 'lucide-react'
 import { testDriveUpload } from '../services/driveService'
 
 const FOLDER_ID = import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID || null
 
-export default function GoogleTopBar({ sync, candidates, onLoadCandidates, onLoadProjects, onLoadInterviews, onLoadDocuments }) {
+export default function GoogleTopBar({ sync, candidates, onLoadCandidates, onLoadProjects, onLoadInterviews, onLoadDocuments, onMenuClick, isMobile }) {
   const [working,    setWorking]    = useState(false)
   const [prompt,     setPrompt]     = useState(null)
   const [driveTest,  setDriveTest]  = useState(null)  // null | 'testing' | { ok, error }
@@ -57,9 +57,15 @@ export default function GoogleTopBar({ sync, candidates, onLoadCandidates, onLoa
     ? sync.lastSync.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
     : null
 
+  const HamburgerBtn = () => isMobile ? (
+    <button onClick={onMenuClick} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8b95a8', padding: '4px 6px', display: 'flex', alignItems: 'center', marginRight: 4, flexShrink: 0 }}>
+      <Menu size={20} />
+    </button>
+  ) : null
+
   const barStyle = {
-    display: 'flex', alignItems: 'center', gap: 10,
-    padding: '0 18px', height: 42, flexShrink: 0,
+    display: 'flex', alignItems: 'center', gap: 8,
+    padding: isMobile ? '0 12px' : '0 18px', height: 46, flexShrink: 0,
     background: '#080c14',
     borderBottom: '1px solid #1a2030',
     fontFamily: 'DM Sans, sans-serif',
@@ -68,6 +74,7 @@ export default function GoogleTopBar({ sync, candidates, onLoadCandidates, onLoa
   // ── Export prompt ────────────────────────────────────────────────────────────
   if (prompt === 'export') return (
     <div style={barStyle}>
+      <HamburgerBtn />
       <span style={{ fontSize: 11, color: '#eab308', fontWeight: 700 }}>Sheet is empty</span>
       <span style={{ fontSize: 11, color: '#8b95a8' }}>Push {candidates.length} candidates to Google Sheets?</span>
       <button onClick={confirmExport} disabled={working} style={chipBtn('#22c55e')}>
@@ -81,6 +88,7 @@ export default function GoogleTopBar({ sync, candidates, onLoadCandidates, onLoa
   // ── Load prompt ──────────────────────────────────────────────────────────────
   if (prompt?.type === 'load') return (
     <div style={barStyle}>
+      <HamburgerBtn />
       <span style={{ fontSize: 11, color: '#4f8ff7', fontWeight: 700 }}>Sheet has data</span>
       <span style={{ fontSize: 11, color: '#8b95a8' }}>Load {prompt.data.length} candidates from sheet?</span>
       <button onClick={() => confirmLoad(prompt.data)} style={chipBtn('#4f8ff7')}>Load</button>
@@ -91,6 +99,7 @@ export default function GoogleTopBar({ sync, candidates, onLoadCandidates, onLoa
   // ── Disconnected ─────────────────────────────────────────────────────────────
   if (!sync.connected) return (
     <div style={barStyle}>
+      <HamburgerBtn />
       <button
         onClick={handleConnect}
         disabled={!sync.ready || working}
@@ -127,6 +136,7 @@ export default function GoogleTopBar({ sync, candidates, onLoadCandidates, onLoa
 
   return (
     <div style={{ ...barStyle, flexWrap: 'wrap', gap: 8 }}>
+      <HamburgerBtn />
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
         {sync.syncing
           ? <Loader size={12} color="#4f8ff7" style={{ animation: 'spin 1s linear infinite' }} />
