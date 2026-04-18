@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #0d1117;
+  color: #d1d5db;
+  font-family: 'DM Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #0d1117;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e2533;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2e3a50;
+}
+
+/* Remove default input/select styles for dark theme */
+input, select, textarea {
+  outline: none;
+}
+
+/* Smooth transitions for interactive elements */
+button, a {
+  transition: all 0.15s ease;
+}
+
+/* Table row hover */
+.table-row-hover:hover {
+  background: rgba(79, 143, 247, 0.04);
+  cursor: pointer;
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #4f8ff7 0%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Card glow on hover */
+.card-glow:hover {
+  box-shadow: 0 0 0 1px rgba(79, 143, 247, 0.2), 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* Pulse animation for live badge */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.pulse-dot {
+  animation: pulse-dot 2s infinite;
+}
+
+/* Slide in from right */
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.slide-in-right {
+  animation: slideInRight 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Fade in */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in-up {
+  animation: fadeInUp 0.2s ease-out;
+}
+
+/* Progress bar fill animation */
+@keyframes fillBar {
+  from { width: 0; }
+}
+.fill-bar {
+  animation: fillBar 0.8s ease-out;
+}
+
+/* Toast notification */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.toast-animate {
+  animation: toastIn 0.3s ease-out;
+}
