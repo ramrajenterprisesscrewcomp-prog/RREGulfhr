@@ -1,7 +1,7 @@
 import { useState } from 'react'
 
-const CRED_EMAIL = 'ramrajenterprises.screwcomp@gmail.com'
-const CRED_PASS  = 'RRE@1234'
+const CRED_EMAIL = import.meta.env.VITE_LOGIN_EMAIL || ''
+const CRED_PASS  = import.meta.env.VITE_LOGIN_PASS  || ''
 const SESSION_KEY = 'rre_session'
 
 export function isLoggedIn() {
