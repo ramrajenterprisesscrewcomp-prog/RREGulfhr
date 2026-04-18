@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Sidebar from './components/Sidebar'
 import Dashboard from './components/Dashboard'
 import Candidates from './components/Candidates'
@@ -7,11 +7,7 @@ import Documents from './components/Documents'
 import { initialCandidates, initialInterviews, initialProjects } from './data/mockData'
 import { useGoogleSync } from './hooks/useGoogleSync'
 import GoogleTopBar from './components/GoogleTopBar'
-import LoginScreen, { isLoggedIn } from './components/LoginScreen'
-
 export default function App() {
-  const [loggedIn, setLoggedIn] = useState(isLoggedIn)
-  if (!loggedIn) return <LoginScreen onLogin={() => setLoggedIn(true)} />
   return <AppMain />
 }
 
