@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :5173)",
+      "Bash(start \"\" \"http://localhost:5173\")",
+      "Bash(node node_modules/vite/bin/vite.js)",
+      "Bash(node node_modules/vite/bin/vite.js build)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git commit *)",
+      "Bash(git pull *)",
+      "Bash(git remote *)"
+    ]
+  }
+}
