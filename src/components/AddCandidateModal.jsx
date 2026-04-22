@@ -202,7 +202,7 @@ export default function AddCandidateModal({ onClose, onAdd, existingCandidates =
       date_added: new Date().toISOString().split('T')[0],
       resume_url: form.resume_url?.trim() || null,
       docs_complete: false,
-    })
+    }, resumeFile)
     onClose()
   }
 

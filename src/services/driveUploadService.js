@@ -3,7 +3,7 @@
 
 const CLIENT_ID   = import.meta.env.VITE_GOOGLE_CLIENT_ID
 const FOLDER_ID   = import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive'
 
 let cachedToken  = null
 let tokenExpiry  = 0
@@ -92,7 +92,7 @@ export async function uploadToDrive(file, meta = {}) {
   form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }))
   form.append('file', file)
 
-  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink&supportsAllDrives=true', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: form,
