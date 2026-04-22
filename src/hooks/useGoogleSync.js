@@ -128,17 +128,10 @@ export function useGoogleSync() {
   const exportAll = useCallback((candidates) =>
     run(() => api.bulkSetCandidates(candidates)), [run])
 
-  const syncAdd = useCallback((candidate, file) =>
+  const syncAdd = useCallback((candidate) =>
     run(async () => {
-      let final = { ...candidate }
-      if (file) {
-        try {
-          const { url } = await api.uploadFile(file, { jobRole: final.role })
-          final.resume_url = url
-        } catch (e) { setError(`Resume upload failed: ${e.message}`) }
-      }
-      await api.addCandidate(final)
-      return final
+      await api.addCandidate(candidate)
+      return candidate
     }), [run])
 
   const syncAddMany = useCallback((candidates) =>
@@ -146,15 +139,8 @@ export function useGoogleSync() {
       const results = []
       for (const cand of candidates) {
         const { _resumeFile, ...clean } = cand
-        let final = { ...clean }
-        if (_resumeFile) {
-          try {
-            const { url } = await api.uploadFile(_resumeFile, { jobRole: final.role })
-            final.resume_url = url
-          } catch (e) { setError(`Upload failed for ${clean.name}: ${e.message}`) }
-        }
-        await api.addCandidate(final)
-        results.push(final)
+        await api.addCandidate(clean)
+        results.push(clean)
       }
       return results
     }), [run])

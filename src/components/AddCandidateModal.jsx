@@ -71,6 +71,7 @@ export default function AddCandidateModal({ onClose, onAdd, existingCandidates =
     name: '', phone: '', email: '', role: '',
     category: 'Engineering', status: 'Home Coming',
     location: '', nationality: '', education: '', experience: '', notes: '',
+    resume_url: '',
   })
   const [errors, setErrors] = useState({})
 
@@ -199,9 +200,9 @@ export default function AddCandidateModal({ onClose, onAdd, existingCandidates =
       ...form,
       id: Date.now().toString(),
       date_added: new Date().toISOString().split('T')[0],
-      resume_url: null,        // Drive upload sets the real URL
+      resume_url: form.resume_url?.trim() || null,
       docs_complete: false,
-    }, resumeFile)             // pass file so App.jsx can upload to Drive
+    })
     onClose()
   }
 
@@ -432,6 +433,14 @@ export default function AddCandidateModal({ onClose, onAdd, existingCandidates =
                 {...inputProps('notes')}
                 style={{ ...baseInput, resize: 'vertical', minHeight: 56 }}
                 rows={2}
+              />
+            </Field>
+
+            {/* Row 9: Resume URL */}
+            <Field label="Resume URL (paste Google Drive or any link)">
+              <input
+                placeholder="https://drive.google.com/file/d/..."
+                {...inputProps('resume_url')}
               />
             </Field>
           </form>
