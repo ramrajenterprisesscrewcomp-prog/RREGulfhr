@@ -1,42 +1,54 @@
 // Uploads files directly from the browser using the user's OAuth token.
-// This avoids service account quota issues — files are owned by the user.
+// GIS is loaded in index.html at startup so requestAccessToken runs
+// synchronously inside a user-gesture context (no popup blocking).
 
 const CLIENT_ID   = import.meta.env.VITE_GOOGLE_CLIENT_ID
 const FOLDER_ID   = import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive'
 
-let cachedToken  = null
-let tokenExpiry  = 0
+let cachedToken = null
+let tokenExpiry = 0
+let tokenClient = null
 
-function loadGIS() {
-  return new Promise((resolve) => {
-    if (window.google?.accounts?.oauth2) return resolve()
-    const s = document.createElement('script')
-    s.src = 'https://accounts.google.com/gsi/client'
-    s.onload = resolve
-    document.head.appendChild(s)
+function buildTokenClient(callback, errorCallback) {
+  return window.google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: DRIVE_SCOPE,
+    callback,
+    error_callback: errorCallback,
   })
 }
 
-async function getToken(forceConsent = false) {
-  if (!forceConsent && cachedToken && Date.now() < tokenExpiry) return cachedToken
-  if (!CLIENT_ID) throw new Error('Google Client ID not configured — add VITE_GOOGLE_CLIENT_ID in Vercel env vars')
-  await loadGIS()
+// Called directly from a button click — no awaits before requestAccessToken
+// so the browser popup is not blocked.
+export function authorizeDrive() {
+  cachedToken = null
+  tokenExpiry = 0
   return new Promise((resolve, reject) => {
-    const client = window.google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      scope: DRIVE_SCOPE,
-      callback: (resp) => {
+    if (!CLIENT_ID) return reject(new Error('VITE_GOOGLE_CLIENT_ID not configured'))
+    if (!window.google?.accounts?.oauth2) return reject(new Error('Google Sign-In library not loaded yet — please refresh the page'))
+    tokenClient = buildTokenClient(
+      (resp) => {
         if (resp.error) return reject(new Error(resp.error_description || resp.error))
         cachedToken = resp.access_token
         tokenExpiry = Date.now() + (resp.expires_in - 60) * 1000
         resolve(cachedToken)
       },
-      error_callback: (err) => reject(new Error(err.message || 'Google auth failed')),
-    })
-    // Force consent screen so user picks account and grants full drive scope
-    client.requestAccessToken(forceConsent ? { prompt: 'consent' } : {})
+      (err) => reject(new Error(err.message || 'Google auth failed')),
+    )
+    // prompt:'select_account consent' forces account picker + permission screen
+    tokenClient.requestAccessToken({ prompt: 'select_account consent' })
   })
+}
+
+export function isDriveAuthorized() {
+  return Boolean(cachedToken && Date.now() < tokenExpiry)
+}
+
+async function getToken() {
+  if (cachedToken && Date.now() < tokenExpiry) return cachedToken
+  // Token expired — caller must click Connect Drive again
+  throw new Error('Drive not authorized — click "Connect Drive" in the top bar first')
 }
 
 async function driveReq(path, opts = {}) {
@@ -52,10 +64,10 @@ async function driveReq(path, opts = {}) {
 
 async function getOrCreateFolder(parentId, name) {
   const q = `name='${name}' and mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents and trashed=false`
-  const found = await driveReq(`/files?q=${encodeURIComponent(q)}&fields=files(id)`)
+  const found = await driveReq(`/files?q=${encodeURIComponent(q)}&fields=files(id)&supportsAllDrives=true`)
   if (found.files?.length) return found.files[0].id
   const token = await getToken()
-  const res = await fetch('https://www.googleapis.com/drive/v3/files?fields=id', {
+  const res = await fetch('https://www.googleapis.com/drive/v3/files?fields=id&supportsAllDrives=true', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] }),
@@ -63,17 +75,6 @@ async function getOrCreateFolder(parentId, name) {
   const json = await res.json()
   if (json.error) throw new Error(json.error.message)
   return json.id
-}
-
-// Call this directly from a button click to pre-authorize before uploading
-export async function authorizeDrive() {
-  cachedToken = null   // force fresh auth
-  tokenExpiry = 0
-  return getToken(true)  // true = force consent screen so user picks account + grants full drive scope
-}
-
-export function isDriveAuthorized() {
-  return Boolean(cachedToken && Date.now() < tokenExpiry)
 }
 
 export async function uploadToDrive(file, meta = {}) {
@@ -85,7 +86,6 @@ export async function uploadToDrive(file, meta = {}) {
   let parents = []
   if (FOLDER_ID) {
     try {
-      // Verify folder is accessible before using it as parent
       const check = await fetch(`https://www.googleapis.com/drive/v3/files/${FOLDER_ID}?fields=id&supportsAllDrives=true`, {
         headers: { Authorization: `Bearer ${token}` },
       })
