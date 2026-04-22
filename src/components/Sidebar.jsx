@@ -41,15 +41,9 @@ export default function Sidebar({ candidates, interviews, activeTab, setActiveTa
       {/* Brand Header */}
       <div style={{ padding: '18px 16px 14px', borderBottom: '1px solid #1a2235', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: 'linear-gradient(135deg, #4f8ff7 0%, #a78bfa 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 14, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px',
-            boxShadow: '0 4px 12px rgba(79,143,247,0.35)', flexShrink: 0,
-          }}>
-            RR
-          </div>
+          <img src="/logo.png" alt="RRE logo"
+            style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'cover', flexShrink: 0, boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}
+          />
           <div>
             <div style={{
               fontSize: 14, fontWeight: 800, letterSpacing: '-0.3px',
