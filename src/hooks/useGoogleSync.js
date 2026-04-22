@@ -128,10 +128,19 @@ export function useGoogleSync() {
   const exportAll = useCallback((candidates) =>
     run(() => api.bulkSetCandidates(candidates)), [run])
 
-  const syncAdd = useCallback((candidate) =>
+  const syncAdd = useCallback((candidate, file) =>
     run(async () => {
-      await api.addCandidate(candidate)
-      return candidate
+      let final = { ...candidate }
+      if (file) {
+        try {
+          const { url } = await api.uploadFile(file, { jobRole: final.role })
+          final.resume_url = url
+        } catch (e) {
+          console.warn('Resume upload skipped:', e.message)
+        }
+      }
+      await api.addCandidate(final)
+      return final
     }), [run])
 
   const syncAddMany = useCallback((candidates) =>

@@ -1,4 +1,5 @@
-// Sheets via service account backend; file uploads via user OAuth → their Drive
+// Sheets → service account backend (always connected)
+// Drive uploads → browser OAuth (user's quota, one-time popup)
 
 import { uploadToDrive } from './driveUploadService'
 
@@ -18,21 +19,19 @@ async function req(method, path, body, isFormData = false) {
   return json
 }
 
-// ── Candidates ────────────────────────────────────────────────────────────────
 export const api = {
-  getCandidates:    ()            => req('GET',    '/candidates'),
-  addCandidate:     (c)           => req('POST',   '/candidates', c),
-  updateCandidate:  (id, data)    => req('PUT',    `/candidates/${id}`, data),
-  deleteCandidate:  (id)          => req('DELETE', `/candidates/${id}`),
-  bulkSetCandidates:(list)        => req('POST',   '/candidates/bulk', list),
+  getCandidates:    ()           => req('GET',    '/candidates'),
+  addCandidate:     (c)          => req('POST',   '/candidates', c),
+  updateCandidate:  (id, data)   => req('PUT',    `/candidates/${id}`, data),
+  deleteCandidate:  (id)         => req('DELETE', `/candidates/${id}`),
+  bulkSetCandidates:(list)       => req('POST',   '/candidates/bulk', list),
 
-  // Generic tab ops (projects, interviews, documents)
-  readTab:  (name)        => req('GET',  `/tabs/${name}`),
-  writeTab: (name, rows)  => req('POST', `/tabs/${name}`, { rows }),
+  readTab:  (name)       => req('GET',  `/tabs/${name}`),
+  writeTab: (name, rows) => req('POST', `/tabs/${name}`, { rows }),
 
+  // Drive upload via browser OAuth — uses user's Drive quota, not service account
   uploadFile: (file, meta = {}) => uploadToDrive(file, meta),
 
   fetchAll: () => req('GET', '/data/all'),
-
-  health: () => req('GET', '/health'),
+  health:   () => req('GET', '/health'),
 }

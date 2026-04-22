@@ -79,11 +79,18 @@ function AppMain() {
   const handleCloseDrawer = useCallback(() => setDrawerCandidate(null), [])
 
   // ── Candidate CRUD + Google Sync ─────────────────────────────────────────────
-  const handleAddCandidate = useCallback((candidate) => {
+  const handleAddCandidate = useCallback((candidate, file) => {
     const { _resumeFile, ...clean } = candidate
+    const actualFile = file || _resumeFile || null
     setCandidates((prev) => [clean, ...prev])
     if (googleSync.connected) {
-      googleSync.syncAdd(clean).catch(console.warn)
+      googleSync.syncAdd(clean, actualFile).then((synced) => {
+        if (synced?.resume_url && synced.resume_url !== clean.resume_url) {
+          setCandidates((prev) =>
+            prev.map((c) => (c.id === synced.id ? { ...c, resume_url: synced.resume_url } : c))
+          )
+        }
+      }).catch(console.warn)
     }
   }, [googleSync])
 
