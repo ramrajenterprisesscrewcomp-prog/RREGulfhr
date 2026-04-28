@@ -169,20 +169,13 @@ export function useGoogleSync() {
 
   const makeCandMap = (arr) => Object.fromEntries((arr || []).map((c) => [c.id, c]))
 
-  const syncAddProject = useCallback((project, candidatesArray) =>
+  // Write ALL projects to a single "Projects" tab so batchReadAll can read them back
+  const syncProjects = useCallback((allProjects, candidatesArray) =>
     run(() => {
-      const rows = buildProjectRows(project, makeCandMap(candidatesArray))
-      return api.writeTab(`project_${project.id}`, rows)
+      const candMap = makeCandMap(candidatesArray)
+      const rows = (allProjects || []).flatMap((p) => buildProjectRows(p, candMap))
+      return api.writeTab('Projects', rows)
     }), [run])
-
-  const syncUpdateProject = useCallback((project, candidatesArray) =>
-    run(() => {
-      const rows = buildProjectRows(project, makeCandMap(candidatesArray))
-      return api.writeTab(`project_${project.id}`, rows)
-    }), [run])
-
-  const syncDeleteProject = useCallback((_projectTitle) =>
-    Promise.resolve(), [])   // tab cleanup not critical — skip for now
 
   // ── Interviews ───────────────────────────────────────────────────────────────
   const fetchInterviews = useCallback(() =>
@@ -221,7 +214,7 @@ export function useGoogleSync() {
     disconnect: () => setConnected(false),
     fetchAll, fetchCandidates, exportAll,
     syncAdd, syncAddMany, syncUpdate, syncDelete,
-    syncAddProject, syncUpdateProject, syncDeleteProject,
+    syncProjects,
     fetchProjects, fetchInterviews, syncInterviews,
     syncDocuments, fetchDocuments,
   }

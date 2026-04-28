@@ -33,6 +33,7 @@ app.use((req, _res, next) => {
 app.use('/api/candidates', require('./routes/candidates'))
 app.use('/api/tabs',       require('./routes/tabs'))
 app.use('/api/drive',      require('./routes/drive'))
+app.use('/api/data',       require('./routes/data'))
 
 app.get('/api/health', (_req, res) => {
   res.json({

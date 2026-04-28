@@ -168,25 +168,70 @@ async function writeTab(tabName, rows) {
   }
 }
 
-// Fetch all tabs in one batchGet call — saves quota (4 reads → 1)
+// Fetch all data in one batchGet — only reads tabs that actually exist
 async function batchReadAll() {
   const sheets = await getSheetsClient()
-  const ranges = [
-    `${CAND_SHEET}!A${DATA_ROW}:O`,
-    'Projects!A1:ZZ',
-    'Interviews!A1:ZZ',
-    'Documents!A1:ZZ',
-  ]
-  let values
+
+  // Step 1: get existing tab names (batchGet fails if any range references a missing tab)
+  let allTabNames = []
   try {
-    const res = await sheets.spreadsheets.values.batchGet({ spreadsheetId: SHEET_ID, ranges })
-    values = res.data.valueRanges.map((r) => r.values || [])
-  } catch {
-    values = [[], [], [], []]
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID })
+    allTabNames = meta.data.sheets.map((s) => s.properties.title)
+  } catch (e) {
+    console.error('[batchReadAll] could not get spreadsheet metadata:', e.message)
+    return { candidates: [], projectRows: [], interviewRows: [], documentRows: [] }
   }
-  const [candRows, projectRows, interviewRows, documentRows] = values
+
+  const has = (name) => allTabNames.includes(name)
+
+  // Step 2: build ranges — only for tabs that exist
+  const namedRanges = [
+    has(CAND_SHEET)    && { key: 'candidates',  range: `${CAND_SHEET}!A${DATA_ROW}:O` },
+    has('Interviews')  && { key: 'interviews',   range: 'Interviews!A1:ZZ' },
+    has('Documents')   && { key: 'documents',    range: 'Documents!A1:ZZ' },
+  ].filter(Boolean)
+
+  // Project tabs: unified "Projects" tab OR legacy "project_*" tabs
+  const projectTabNames = allTabNames.filter(
+    (t) => t === 'Projects' || t.startsWith('project_')
+  )
+  const projectRanges = projectTabNames.map((t) => ({ key: `proj:${t}`, range: `${t}!A1:ZZ` }))
+
+  const allEntries = [...namedRanges, ...projectRanges]
+  if (allEntries.length === 0) {
+    return { candidates: [], projectRows: [], interviewRows: [], documentRows: [] }
+  }
+
+  // Step 3: single batchGet
+  let rawValues
+  try {
+    const res = await sheets.spreadsheets.values.batchGet({
+      spreadsheetId: SHEET_ID,
+      ranges: allEntries.map((e) => e.range),
+    })
+    rawValues = res.data.valueRanges.map((r) => r.values || [])
+  } catch (e) {
+    console.error('[batchReadAll] batchGet failed:', e.message)
+    return { candidates: [], projectRows: [], interviewRows: [], documentRows: [] }
+  }
+
+  // Step 4: map results by key
+  const result = {}
+  allEntries.forEach((entry, i) => { result[entry.key] = rawValues[i] })
+
+  const candRows      = result['candidates'] || []
+  const interviewRows = result['interviews'] || []
+  const documentRows  = result['documents']  || []
+  const projectRows   = projectTabNames.flatMap((t) => result[`proj:${t}`] || [])
+
+  // Step 5: auto-migrate legacy project_* tabs → unified Projects tab
+  const hasLegacy = projectTabNames.some((t) => t.startsWith('project_'))
+  if (hasLegacy && projectRows.length > 0) {
+    writeTab('Projects', projectRows).catch(() => {})
+  }
+
   return {
-    candidates:  candRows.filter((r) => r[0]).map(rowToObj),
+    candidates:   candRows.filter((r) => r[0]).map(rowToObj),
     projectRows,
     interviewRows,
     documentRows,

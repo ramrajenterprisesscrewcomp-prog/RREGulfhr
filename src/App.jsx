@@ -54,11 +54,12 @@ function AppMain() {
     lastFetch.current = now
     googleSync.fetchAll().then((d) => {
       if (!d) return
-      if (d.candidates?.length) setCandidates(d.candidates)
-      if (d.projects?.length)   setProjects(d.projects)
-      if (d.interviews?.length) setInterviews(d.interviews)
-      if (d.docs?.length)       setDocuments(d.docs)
-      if (d.checklist && Object.keys(d.checklist).length) setDocChecklist(d.checklist)
+      // Always replace with sheet data — even empty arrays — so mock data never persists
+      setCandidates(d.candidates  ?? [])
+      setProjects(d.projects      ?? [])
+      setInterviews(d.interviews  ?? [])
+      if (d.docs)      setDocuments(d.docs)
+      if (d.checklist) setDocChecklist(d.checklist)
     }).catch(() => {})
   }, [googleSync.connected])
 
@@ -140,94 +141,68 @@ function AppMain() {
 
   // ── Project CRUD + Google Sync ───────────────────────────────────────────────
   const handleAddProject = useCallback((project) => {
-    setProjects((prev) => [project, ...prev])
-    if (googleSync.connected) {
-      googleSync.syncAddProject(project, candidates).catch(console.warn)
-    }
-  }, [googleSync, candidates])
+    const next = [project, ...projects]
+    setProjects(next)
+    if (googleSync.connected) googleSync.syncProjects(next, candidates).catch(console.warn)
+  }, [googleSync, candidates, projects])
 
   const handleUpdateProject = useCallback((projectId, roleId, updates) => {
-    let updatedProject = null
-    setProjects((prev) => prev.map((p) => {
+    const next = projects.map((p) => {
       if (p.id !== projectId) return p
-      updatedProject = {
+      return {
         ...p,
-        roles: roleId
-          ? p.roles.map((r) => (r.id === roleId ? { ...r, ...updates } : r))
-          : p.roles,
+        roles: roleId ? p.roles.map((r) => (r.id === roleId ? { ...r, ...updates } : r)) : p.roles,
         ...(roleId ? {} : updates),
       }
-      return updatedProject
-    }))
-    if (googleSync.connected && updatedProject) {
-      googleSync.syncUpdateProject(updatedProject, candidates).catch(console.warn)
-    }
-  }, [googleSync, candidates])
+    })
+    setProjects(next)
+    if (googleSync.connected) googleSync.syncProjects(next, candidates).catch(console.warn)
+  }, [googleSync, candidates, projects])
 
   const handleAddCandidateToRole = useCallback((projectId, roleId, candidateId) => {
-    let updatedProject = null
-    setProjects((prev) => prev.map((p) => {
+    const next = projects.map((p) => {
       if (p.id !== projectId) return p
-      updatedProject = {
+      return {
         ...p,
         roles: p.roles.map((r) => {
           if (r.id !== roleId) return r
           if (r.selectedCandidates.includes(candidateId)) return r
-          const next = [...r.selectedCandidates, candidateId]
-          const roleStatus = next.length >= r.required ? 'Filled' : next.length > 0 ? 'In Progress' : 'Open'
-          return { ...r, selectedCandidates: next, roleStatus }
+          const sel = [...r.selectedCandidates, candidateId]
+          return { ...r, selectedCandidates: sel, roleStatus: sel.length >= r.required ? 'Filled' : 'In Progress' }
         }),
       }
-      return updatedProject
-    }))
-    if (googleSync.connected && updatedProject) {
-      googleSync.syncUpdateProject(updatedProject, candidates).catch(console.warn)
-    }
-  }, [googleSync, candidates])
+    })
+    setProjects(next)
+    if (googleSync.connected) googleSync.syncProjects(next, candidates).catch(console.warn)
+  }, [googleSync, candidates, projects])
 
   const handleRemoveCandidateFromRole = useCallback((projectId, roleId, candidateId) => {
-    let updatedProject = null
-    setProjects((prev) => prev.map((p) => {
+    const next = projects.map((p) => {
       if (p.id !== projectId) return p
-      updatedProject = {
+      return {
         ...p,
         roles: p.roles.map((r) => {
           if (r.id !== roleId) return r
-          const next = r.selectedCandidates.filter((id) => id !== candidateId)
-          const roleStatus = next.length >= r.required ? 'Filled' : next.length > 0 ? 'In Progress' : 'Open'
-          return { ...r, selectedCandidates: next, roleStatus }
+          const sel = r.selectedCandidates.filter((id) => id !== candidateId)
+          return { ...r, selectedCandidates: sel, roleStatus: sel.length >= r.required ? 'Filled' : sel.length > 0 ? 'In Progress' : 'Open' }
         }),
       }
-      return updatedProject
-    }))
-    if (googleSync.connected && updatedProject) {
-      googleSync.syncUpdateProject(updatedProject, candidates).catch(console.warn)
-    }
-  }, [googleSync, candidates])
+    })
+    setProjects(next)
+    if (googleSync.connected) googleSync.syncProjects(next, candidates).catch(console.warn)
+  }, [googleSync, candidates, projects])
 
   const handleAddRole = useCallback((projectId, role) => {
-    let updatedProject = null
-    setProjects((prev) => prev.map((p) => {
-      if (p.id !== projectId) return p
-      updatedProject = { ...p, roles: [...p.roles, role] }
-      return updatedProject
-    }))
-    if (googleSync.connected && updatedProject) {
-      googleSync.syncUpdateProject(updatedProject, candidates).catch(console.warn)
-    }
-  }, [googleSync, candidates])
+    const next = projects.map((p) => p.id !== projectId ? p : { ...p, roles: [...p.roles, role] })
+    setProjects(next)
+    if (googleSync.connected) googleSync.syncProjects(next, candidates).catch(console.warn)
+  }, [googleSync, candidates, projects])
 
   const handleDeleteRole = useCallback((projectId, roleId) => {
-    let updatedProject = null
-    setProjects((prev) => prev.map((p) => {
-      if (p.id !== projectId) return p
-      updatedProject = { ...p, roles: p.roles.filter((r) => r.id !== roleId) }
-      return updatedProject
-    }))
-    if (googleSync.connected && updatedProject) {
-      googleSync.syncUpdateProject(updatedProject, candidates).catch(console.warn)
-    }
-  }, [googleSync, candidates])
+    const next = projects.map((p) => p.id !== projectId ? p : { ...p, roles: p.roles.filter((r) => r.id !== roleId) })
+    setProjects(next)
+    if (googleSync.connected) googleSync.syncProjects(next, candidates).catch(console.warn)
+  }, [googleSync, candidates, projects])
 
   // ── Interview CRUD + Google Sync ─────────────────────────────────────────────
   const handleAddInterview = useCallback((iv) => {

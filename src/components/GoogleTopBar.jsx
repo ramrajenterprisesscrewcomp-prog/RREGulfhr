@@ -20,15 +20,26 @@ export default function GoogleTopBar({ sync, candidates, onLoadCandidates, onLoa
     return () => clearInterval(t)
   }, [])
 
+  const pullData = async (d) => {
+    if (!d) return
+    if (d.candidates?.length) onLoadCandidates?.(d.candidates)
+    if (d.projects?.length)   onLoadProjects?.(d.projects)
+    if (d.interviews?.length) onLoadInterviews?.(d.interviews)
+    if (d.docs || d.checklist) onLoadDocuments?.(d)
+  }
+
   const handleRefresh = async () => {
     setWorking(true)
+    try { await pullData(await sync.fetchAll()) }
+    finally { setWorking(false) }
+  }
+
+  const handleReconnect = async () => {
+    setWorking(true)
     try {
+      await sync.connect()
       const d = await sync.fetchAll()
-      if (!d) return
-      if (d.candidates?.length) onLoadCandidates?.(d.candidates)
-      if (d.projects?.length)   onLoadProjects?.(d.projects)
-      if (d.interviews?.length) onLoadInterviews?.(d.interviews)
-      if (d.docs || d.checklist) onLoadDocuments?.(d)
+      await pullData(d)
     } finally { setWorking(false) }
   }
 
@@ -85,7 +96,14 @@ export default function GoogleTopBar({ sync, candidates, onLoadCandidates, onLoa
         </span>
       )}
 
-      <button onClick={handleRefresh} disabled={sync.syncing || working} title="Refresh from sheet"
+      {!sync.connected && (
+        <button onClick={handleReconnect} disabled={working} title="Reconnect to backend"
+          style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 6, color: '#ef4444', fontSize: 11, fontWeight: 700, cursor: working ? 'not-allowed' : 'pointer', padding: '3px 10px', fontFamily: 'DM Sans, sans-serif' }}>
+          <RefreshCw size={12} /> Reconnect
+        </button>
+      )}
+
+      <button onClick={handleRefresh} disabled={sync.syncing || working || !sync.connected} title="Refresh from sheet"
         style={{ background: 'none', border: 'none', cursor: sync.syncing || working ? 'not-allowed' : 'pointer', color: '#4a5568', padding: '3px 5px', display: 'flex', alignItems: 'center', borderRadius: 4 }}
         onMouseEnter={(e) => e.currentTarget.style.color = '#4f8ff7'}
         onMouseLeave={(e) => e.currentTarget.style.color = '#4a5568'}>
