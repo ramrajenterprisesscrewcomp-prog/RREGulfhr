@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { X, Mail, Search, Loader, CheckCircle, AlertCircle, FileText, User, ChevronDown, ChevronRight, Check, RefreshCw } from 'lucide-react'
 import { scanEmailsForResumes, downloadAttachment, getEmailBody } from '../services/gmailService'
 import { analyzeResume, analyzeEmailContent, hasApiKey } from '../services/resumeParser'
+import { isConnected, initGoogleAuth, requestToken } from '../services/googleAuth'
 import { CATEGORIES, PIPELINE_STAGES } from '../data/mockData'
 
 function fmtDate(dateStr) {
@@ -75,6 +76,15 @@ export default function EmailScanModal({ onClose, onAddCandidates, existingCandi
     setScanning(true); setScanError(''); setEmails([]); setAttStates({}); setExpanded({}); setDone(false)
     extractedRef.current = new Set()
     try {
+      // Ensure Gmail OAuth token (gmail.readonly scope) is active before scanning
+      if (!isConnected()) {
+        if (!initGoogleAuth()) {
+          setScanError('Google Sign-In library not loaded — please refresh and try again.')
+          setScanning(false)
+          return
+        }
+        await requestToken(false)   // shows Google consent popup
+      }
       const results = await scanEmailsForResumes(40, daysBack)
       const scannedIds = loadScannedIds()
       const freshCount = results.filter((m) => !scannedIds.has(m.messageId)).length
