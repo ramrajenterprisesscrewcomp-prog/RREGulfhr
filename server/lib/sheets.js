@@ -7,7 +7,7 @@ const DATA_ROW     = 3   // row where data starts (row 1=title, row 2=headers)
 const HEADERS = [
   'id','name','phone','email','role','experience','education',
   'location','nationality','category','status','date_added',
-  'resume_url','docs_complete','notes',
+  'resume_url','docs_complete','notes','edited_resume_url',
 ]
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -55,7 +55,7 @@ async function getCandidates() {
   await ensureSheet()
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID,
-    range: `${CAND_SHEET}!A${DATA_ROW}:O`,
+    range: `${CAND_SHEET}!A${DATA_ROW}:P`,
   })
   return (res.data.values || []).filter((r) => r[0]).map(rowToObj)
 }
@@ -83,7 +83,7 @@ async function updateCandidate(id, data) {
   const merged = { ...all[idx], ...data }
   await sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
-    range: `${CAND_SHEET}!A${rowNum}:O${rowNum}`,
+    range: `${CAND_SHEET}!A${rowNum}:P${rowNum}`,
     valueInputOption: 'RAW',
     requestBody: { values: [objToRow(merged)] },
   })
@@ -120,7 +120,7 @@ async function bulkSetCandidates(candidates) {
   // Clear existing data rows
   await sheets.spreadsheets.values.clear({
     spreadsheetId: SHEET_ID,
-    range: `${CAND_SHEET}!A${DATA_ROW}:O`,
+    range: `${CAND_SHEET}!A${DATA_ROW}:P`,
   })
   if (candidates.length === 0) return
   await sheets.spreadsheets.values.update({
@@ -186,7 +186,7 @@ async function batchReadAll() {
 
   // Step 2: build ranges — only for tabs that exist
   const namedRanges = [
-    has(CAND_SHEET)    && { key: 'candidates',  range: `${CAND_SHEET}!A${DATA_ROW}:O` },
+    has(CAND_SHEET)    && { key: 'candidates',  range: `${CAND_SHEET}!A${DATA_ROW}:P` },
     has('Interviews')  && { key: 'interviews',   range: 'Interviews!A1:ZZ' },
     has('Documents')   && { key: 'documents',    range: 'Documents!A1:ZZ' },
   ].filter(Boolean)

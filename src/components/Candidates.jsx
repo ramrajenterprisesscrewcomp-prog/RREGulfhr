@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
-import { Search, Plus, Upload, Download, ChevronUp, ChevronDown, X, SlidersHorizontal, Trash2, Eye, EyeOff, ExternalLink, FileText, Mail, FileDown } from 'lucide-react'
+import { Search, Plus, Upload, Download, ChevronUp, ChevronDown, X, SlidersHorizontal, Trash2, Eye, EyeOff, ExternalLink, FileText, Mail, FileDown, Loader } from 'lucide-react'
+import { uploadToDrive, authorizeDrive, isDriveAuthorized } from '../services/driveUploadService'
 import StatusBadge from './StatusBadge'
 import AddCandidateModal from './AddCandidateModal'
 import BulkUploadModal from './BulkUploadModal'
@@ -59,6 +60,7 @@ export default function Candidates({
   const [showEmailModal, setShowEmailModal] = useState(false)
   const [toast, setToast]                   = useState(null)
   const [previewCandidate, setPreviewCandidate] = useState(null)
+  const [uploadingEdited, setUploadingEdited] = useState({})
 
   // Sync external filter
   useMemo(() => {
@@ -162,6 +164,24 @@ export default function Candidates({
     setTimeout(() => setToast(null), 3000)
   }
 
+  const handleEditedResumeUpload = async (e, candidate) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setUploadingEdited((prev) => ({ ...prev, [candidate.id]: true }))
+    try {
+      if (!isDriveAuthorized()) await authorizeDrive()
+      const { url } = await uploadToDrive(file, { jobRole: candidate.role })
+      onUpdateCandidate(candidate.id, { edited_resume_url: url })
+      setToast('Edited resume uploaded!')
+      setTimeout(() => setToast(null), 3000)
+    } catch (err) {
+      alert(`Upload failed: ${err.message}`)
+    } finally {
+      setUploadingEdited((prev) => ({ ...prev, [candidate.id]: false }))
+    }
+  }
+
   const togglePreview = (e, c) => {
     e.stopPropagation()
     setPreviewCandidate((prev) => (prev?.id === c.id ? null : c))
@@ -177,6 +197,9 @@ export default function Candidates({
   }
 
   const isPreviewing = Boolean(previewCandidate)
+  const previewUrl = previewCandidate?._previewEdited
+    ? previewCandidate.edited_resume_url
+    : previewCandidate?.resume_url
 
   return (
     <div style={{ display: 'flex', minHeight: '100%', alignItems: 'flex-start' }}>
@@ -271,7 +294,7 @@ export default function Candidates({
         {/* Table */}
         <div style={{ background: '#111620', border: '1px solid #1e2533', borderRadius: 12, overflowX: 'auto' }}>
           {/* Header */}
-          <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.6fr 1.3fr 1.5fr 1.3fr 1.4fr 1.4fr 1.1fr 1.1fr 1.5fr 1.3fr 0.9fr 0.4fr', gap: 0, borderBottom: '1px solid #1e2533', background: '#0d1117', minWidth: 1600 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.6fr 1.3fr 1.5fr 1.3fr 1.4fr 1.4fr 1.1fr 1.1fr 1.5fr 1.3fr 0.9fr 1.1fr 0.4fr', gap: 0, borderBottom: '1px solid #1e2533', background: '#0d1117', minWidth: 1600 }}>
             {[
               { label: 'Timestamp',      field: 'date_added' },
               { label: 'Name',           field: 'name' },
@@ -285,6 +308,7 @@ export default function Candidates({
               { label: 'Short Notes',    field: null },
               { label: 'Status',         field: 'status' },
               { label: 'Resume',         field: null },
+              { label: 'Edited Resume',  field: null },
               { label: '',               field: null },
             ].map(({ label, field }) => (
               <div
@@ -321,12 +345,12 @@ export default function Candidates({
                   onClick={() => onOpenDrawer(c)}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '0.9fr 1.6fr 1.3fr 1.5fr 1.3fr 1.4fr 1.4fr 1.1fr 1.1fr 1.5fr 1.3fr 0.9fr 0.4fr',
+                    gridTemplateColumns: '0.9fr 1.6fr 1.3fr 1.5fr 1.3fr 1.4fr 1.4fr 1.1fr 1.1fr 1.5fr 1.3fr 0.9fr 1.1fr 0.4fr',
                     gap: 0,
                     borderBottom: idx < filtered.length - 1 ? '1px solid #1a2133' : 'none',
                     background: isActive ? 'rgba(79,143,247,0.06)' : undefined,
                     transition: 'background 0.12s',
-                    minWidth: 1600,
+                    minWidth: 1780,
                   }}
                 >
                   {/* Timestamp */}
@@ -433,6 +457,50 @@ export default function Candidates({
                     )}
                   </div>
 
+                  {/* Edited Resume */}
+                  <div style={{ padding: '12px 10px', display: 'flex', alignItems: 'center', gap: 4 }} onClick={(e) => e.stopPropagation()}>
+                    {uploadingEdited[c.id] ? (
+                      <Loader size={13} color="#4f8ff7" style={{ animation: 'spin 1s linear infinite' }} />
+                    ) : (
+                      <>
+                        {c.edited_resume_url && (
+                          <>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setPreviewCandidate((prev) => prev?.id === c.id && prev._previewEdited ? null : { ...c, _previewEdited: true }) }}
+                              title="Preview edited resume"
+                              style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '3px 7px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}
+                            >
+                              <Eye size={11} />
+                            </button>
+                            <a
+                              href={c.edited_resume_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              title="Open edited resume in Drive"
+                              style={{ display: 'flex', alignItems: 'center', padding: '3px 6px', borderRadius: 6, border: '1px solid rgba(34,197,94,0.2)', color: '#4a5568', textDecoration: 'none' }}
+                              onMouseEnter={(e) => e.currentTarget.style.color = '#22c55e'}
+                              onMouseLeave={(e) => e.currentTarget.style.color = '#4a5568'}
+                            >
+                              <Download size={11} />
+                            </a>
+                          </>
+                        )}
+                        <label
+                          title={c.edited_resume_url ? 'Replace edited resume' : 'Upload edited resume'}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ display: 'flex', alignItems: 'center', padding: '3px 6px', borderRadius: 6, border: `1px solid ${c.edited_resume_url ? 'rgba(34,197,94,0.25)' : 'rgba(79,143,247,0.2)'}`, color: c.edited_resume_url ? '#22c55e' : '#4f8ff7', cursor: 'pointer' }}
+                          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.75'}
+                          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                        >
+                          <input type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style={{ display: 'none' }} onChange={(e) => handleEditedResumeUpload(e, c)} />
+                          <Upload size={11} />
+                        </label>
+                        {!c.edited_resume_url && <span style={{ fontSize: 11, color: '#2e3a50' }}>—</span>}
+                      </>
+                    )}
+                  </div>
+
                   {/* Delete */}
                   <div style={{ padding: '12px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <button
@@ -487,9 +555,12 @@ export default function Candidates({
                 </div>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+            <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: previewCandidate._previewEdited ? '#22c55e' : '#4f8ff7', background: previewCandidate._previewEdited ? 'rgba(34,197,94,0.1)' : 'rgba(79,143,247,0.1)', border: `1px solid ${previewCandidate._previewEdited ? 'rgba(34,197,94,0.3)' : 'rgba(79,143,247,0.3)'}`, borderRadius: 5, padding: '2px 7px' }}>
+                {previewCandidate._previewEdited ? 'Edited' : 'Original'}
+              </span>
               <a
-                href={previewCandidate.resume_url}
+                href={previewUrl}
                 target="_blank"
                 rel="noreferrer"
                 title="Open in Google Drive"
@@ -523,9 +594,9 @@ export default function Candidates({
           {/* iframe */}
           <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
             <iframe
-              key={previewCandidate.id}
-              src={driveEmbedUrl(previewCandidate.resume_url)}
-              title={`${previewCandidate.name} resume`}
+              key={previewCandidate.id + (previewCandidate._previewEdited ? '_edited' : '')}
+              src={driveEmbedUrl(previewUrl)}
+              title={`${previewCandidate.name} ${previewCandidate._previewEdited ? 'edited resume' : 'resume'}`}
               style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
               allow="autoplay"
             />
@@ -537,7 +608,7 @@ export default function Candidates({
               pointerEvents: 'none', whiteSpace: 'nowrap',
             }}>
               <FileText size={9} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-              Resume · Google Drive
+              {previewCandidate._previewEdited ? 'Edited Resume' : 'Resume'} · Google Drive
             </div>
           </div>
         </div>
