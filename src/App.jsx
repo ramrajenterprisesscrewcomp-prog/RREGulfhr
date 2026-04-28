@@ -64,6 +64,7 @@ function AppMain() {
   }, [])
 
   // ── Auto-load all data on connect — single batchGet, 60s throttle ───────────
+  const mainRef      = useRef(null)
   const autoLoadDone = useRef(false)
   const lastFetch    = useRef(0)
   useEffect(() => {
@@ -103,6 +104,9 @@ function AppMain() {
       if (d.todos)     setTodos(d.todos)
     }).catch(() => {})
   }, [googleSync.connected])
+
+  // ── Scroll to top on tab change ──────────────────────────────────────────────
+  useEffect(() => { mainRef.current?.scrollTo({ top: 0 }) }, [activeTab])
 
   // ── Navigation ───────────────────────────────────────────────────────────────
   const handleNavigateToCandidates = useCallback((filter) => {
@@ -324,7 +328,7 @@ function AppMain() {
         onClose={() => setSidebarOpen(false)}
       />
 
-      <main style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative', marginLeft: isMobile ? 0 : 0 }}>
+      <main ref={mainRef} style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', position: 'relative', marginLeft: isMobile ? 0 : 0 }}>
         {activeTab === 'dashboard' && (
           <Dashboard
             candidates={candidates}
